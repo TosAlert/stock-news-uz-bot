@@ -38,23 +38,49 @@ def save_state(state):
     )
 
 
+def log(message):
+    print(message, flush=True)
+
+
 async def cycle(dry_run=False):
     wl = watchlist()
+    log(f"WATCHLIST: {len(wl)} tickerlar")
+    log(f"LOOKBACK: {NEWS_LOOKBACK_MINUTES} daqiqa")
+
     providers = [AlpacaNewsProvider(), SECProvider()]
     if MACRO_RSS_URLS:
         providers.append(RSSProvider(MACRO_RSS_URLS))
 
     all_items = []
-    # Fetch broad market/company news from Alpaca without restricting the
-    # provider to the watchlist. Gemini will decide relevance later.
-    all_items += await providers[0].fetch(
-        None,
-        since_minutes=NEWS_LOOKBACK_MINUTES,
-    )
-    all_items += await providers[1].fetch()
-    if len(providers) > 2:
-        all_items += await providers[2].fetch()
 
+    try:
+        alpaca_items = await providers[0].fetch(
+            None,
+            since_minutes=NEWS_LOOKBACK_MINUTES,
+        )
+        log(f"ALPACA NEWS: {len(alpaca_items)}")
+        if alpaca_items:
+            log(f"ALPACA TOP: {alpaca_items[0].title[:160]}")
+        all_items += alpaca_items
+    except Exception as e:
+        log(f"ALPACA ERROR: {type(e).__name__}: {e}")
+
+    try:
+        sec_items = await providers[1].fetch()
+        log(f"SEC NEWS: {len(sec_items)}")
+        all_items += sec_items
+    except Exception as e:
+        log(f"SEC ERROR: {type(e).__name__}: {e}")
+
+    if len(providers) > 2:
+        try:
+            rss_items = await providers[2].fetch()
+            log(f"RSS NEWS: {len(rss_items)}")
+            all_items += rss_items
+        except Exception as e:
+            log(f"RSS ERROR: {type(e).__name__}: {e}")
+
+    log(f"ALL NEWS: {len(all_items)}")
     all_items.sort(key=lambda x: x.published_at, reverse=True)
 
     now = datetime.now(timezone.utc)
@@ -62,6 +88,7 @@ async def cycle(dry_run=False):
 
     state = load_state()
     published_ids = set(state["published_ids"])
+    log(f"PUBLISHED IDS: {len(published_ids)}")
 
     candidates = []
     local_seen = set()
@@ -81,14 +108,26 @@ async def cycle(dry_run=False):
         if len(candidates) >= MAX_AI_ITEMS_PER_RUN:
             break
 
+    log(f"CANDIDATES: {len(candidates)}")
+    if candidates:
+        for i, item in enumerate(candidates[:5], 1):
+            log(f"CANDIDATE {i}: {item.title[:140]}")
+
     if not candidates:
-        print("Yangi yangilik yo'q.")
+        log("Yangi yangilik yo'q.")
         return
 
-    results = await analyze_batch(candidates, wl)
-    by_id = {str(x.get("source_id")): x for x in results}
+    try:
+        results = await analyze_batch(candidates, wl)
+        log(f"AI RESULTS: {len(results)}")
+    except Exception as e:
+        log(f"AI ERROR: {type(e).__name__}: {e}")
+        return
 
+    by_id = {str(x.get("source_id")): x for x in results}
     changed = False
+    sent_count = 0
+    publish_count = 0
 
     for item in candidates:
         result = by_id.get(str(item.source_id))
@@ -104,26 +143,39 @@ async def cycle(dry_run=False):
             and score >= MIN_IMPACT_SCORE
         )
 
-        if not publish:
+        if publish:
+            publish_count += 1
+        else:
+            log(
+                f"SKIP: score={score} direction={direction} "
+                f"publish={result.get('publish')} title={item.title[:100]}"
+            )
             continue
 
         text = render(item, result)
         if dry_run:
-            print("\n--- DRY RUN ---\n" + text)
+            log("\n--- DRY RUN ---\n" + text)
         else:
             try:
                 await send(text)
-                print("SENT:", result.get("title_uz") or item.title)
+                sent_count += 1
+                log("SENT: " + str(result.get("title_uz") or item.title))
             except Exception as e:
-                print("TELEGRAM ERROR:", e)
+                log(f"TELEGRAM ERROR: {type(e).__name__}: {e}")
                 continue
 
         published_ids.add(item.source_id)
         changed = True
 
+    log(f"PUBLISHABLE: {publish_count}")
+    log(f"SENT COUNT: {sent_count}")
+
     if changed and not dry_run:
         state["published_ids"] = list(published_ids)[-1000:]
         save_state(state)
+        log("STATE: saved")
+    else:
+        log("STATE: no changes")
 
 
 async def main():
@@ -141,7 +193,7 @@ async def main():
         try:
             await cycle(args.dry_run)
         except Exception as e:
-            print("CYCLE ERROR:", e)
+            log(f"CYCLE ERROR: {type(e).__name__}: {e}")
         await asyncio.sleep(300)
 
 
