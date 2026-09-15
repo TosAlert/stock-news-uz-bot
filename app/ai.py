@@ -1,10 +1,9 @@
 import json
 import httpx
-from datetime import datetime, timezone, timedelta
 from .config import GEMINI_API_KEY, GEMINI_MODEL, MIN_IMPACT_SCORE
 from .models import NewsItem
 
-API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 SYSTEM = r"""
 You are the chief editor of a professional Uzbek-language US stock-market news channel.
@@ -161,9 +160,13 @@ ARTICLES:
     try:
         async with httpx.AsyncClient(timeout=120) as client:
             r = await client.post(
-                API_URL.format(model=GEMINI_MODEL, key=GEMINI_API_KEY),
+                API_URL.format(model=GEMINI_MODEL),
+                headers={
+                    "x-goog-api-key": GEMINI_API_KEY,
+                    "Content-Type": "application/json",
+                },
                 json={
-                    "system_instruction": {"parts": [{"text": SYSTEM}]},
+                    "systemInstruction": {"parts": [{"text": SYSTEM}]},
                     "contents": [{"role": "user", "parts": [{"text": prompt}]}],
                     "generationConfig": {
                         "temperature": 0.1,
@@ -172,7 +175,9 @@ ARTICLES:
                     },
                 },
             )
-            r.raise_for_status()
+            if r.status_code >= 400:
+                detail = r.text[:1200].replace("\n", " ")
+                raise RuntimeError(f"Gemini HTTP {r.status_code}: {detail}")
             data = r.json()
 
         text = (
@@ -216,4 +221,5 @@ ARTICLES:
             })
         return out
     except Exception as e:
+        print(f"GEMINI ERROR: {e}", flush=True)
         return [_fallback(x, f"Gemini xatosi: {e}") for x in items]
