@@ -1,3 +1,4 @@
+import asyncio
 import re
 
 import httpx
@@ -16,10 +17,11 @@ from .telegram import send_to_chat
 
 
 _SOURCE_LINE_RE = re.compile(r"^\s*(?:📰\s*)?manba\b", re.IGNORECASE)
+MAX_EDITS_PER_RUN = 15
+EDIT_DELAY_SECONDS = 3
 
 
 def _without_source(raw_text: str):
-    """Remove only lines that start with 'Manba' and preserve the rest as plain text."""
     lines = raw_text.splitlines()
     new_lines = [line for line in lines if not _SOURCE_LINE_RE.match(line)]
 
@@ -33,7 +35,6 @@ def _without_source(raw_text: str):
 
 
 async def _resolve_channel(client):
-    """Resolve the channel reliably from either @username or Telegram channel ID."""
     raw = str(TELEGRAM_CHANNEL_ID).strip()
     if not raw:
         raise RuntimeError("TELEGRAM_CHANNEL_ID bo'sh.")
@@ -115,6 +116,9 @@ async def remove_sources() -> int:
                     link_preview=False,
                 )
                 edited += 1
+                if edited >= MAX_EDITS_PER_RUN:
+                    break
+                await asyncio.sleep(EDIT_DELAY_SECONDS)
             except MessageNotModifiedError:
                 continue
             except FloodWaitError as e:
@@ -126,7 +130,10 @@ async def remove_sources() -> int:
         if client.is_connected():
             await client.disconnect()
 
-    print(f"SOURCE CLEANUP: scanned={scanned} edited={edited}", flush=True)
+    print(
+        f"SOURCE CLEANUP: scanned={scanned} edited={edited} limit={MAX_EDITS_PER_RUN}",
+        flush=True,
+    )
     return edited
 
 
@@ -210,7 +217,12 @@ async def process_commands():
             edited = await remove_sources()
             await send_to_chat(
                 chat_id,
-                f"✅ Tayyor. <b>{edited}</b> ta eski xabar tahrirlandi.",
+                f"✅ Tayyor. <b>{edited}</b> ta eski xabar tahrirlandi."
+                + (
+                    "\n🔁 Qolganlarini olib tashlash uchun /remove_source ni yana yuboring."
+                    if edited >= MAX_EDITS_PER_RUN
+                    else ""
+                ),
             )
         except Exception as e:
             print(f"SOURCE CLEANUP ERROR: {type(e).__name__}: {e}", flush=True)
