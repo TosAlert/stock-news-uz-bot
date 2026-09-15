@@ -1,9 +1,11 @@
+import asyncio
 import json
 import httpx
 from .config import GEMINI_API_KEY, GEMINI_MODEL, MIN_IMPACT_SCORE
 from .models import NewsItem
 
 API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+FALLBACK_MODEL = "gemini-3.5-flash-lite"
 
 SYSTEM = r"""
 You are the chief editor of a professional Uzbek-language US stock-market news channel.
@@ -110,6 +112,7 @@ SCHEMA = {
     },
 }
 
+
 def _fallback(item: NewsItem, reason="AI tahlili bajarilmadi."):
     return {
         "source_id": item.source_id,
@@ -121,6 +124,54 @@ def _fallback(item: NewsItem, reason="AI tahlili bajarilmadi."):
         "summary_uz": "",
         "reason_uz": reason,
     }
+
+
+async def _request_model(client, model, prompt):
+    url = API_URL.format(model=model)
+    last_error = None
+
+    for attempt in range(4):
+        try:
+            r = await client.post(
+                url,
+                headers={
+                    "x-goog-api-key": GEMINI_API_KEY,
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "systemInstruction": {"parts": [{"text": SYSTEM}]},
+                    "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+                    "generationConfig": {
+                        "responseMimeType": "application/json",
+                        "responseSchema": SCHEMA,
+                    },
+                },
+            )
+
+            if r.status_code in {429, 500, 502, 503, 504}:
+                last_error = f"Gemini HTTP {r.status_code}: {r.text[:600].replace(chr(10), ' ')}"
+                if attempt < 3:
+                    wait = 2 ** (attempt + 1)
+                    print(f"GEMINI RETRY: model={model} status={r.status_code} wait={wait}s", flush=True)
+                    await asyncio.sleep(wait)
+                    continue
+
+            if r.status_code >= 400:
+                detail = r.text[:1200].replace("\n", " ")
+                raise RuntimeError(f"Gemini HTTP {r.status_code}: {detail}")
+
+            return r.json()
+        except (httpx.HTTPError, RuntimeError) as e:
+            last_error = str(e)
+            if attempt < 3:
+                wait = 2 ** (attempt + 1)
+                print(f"GEMINI RETRY: model={model} error={type(e).__name__} wait={wait}s", flush=True)
+                await asyncio.sleep(wait)
+            else:
+                raise
+
+    raise RuntimeError(last_error or "Gemini request failed")
+
 
 async def analyze_batch(items: list[NewsItem], watchlist: list[str]) -> list[dict]:
     if not items:
@@ -159,26 +210,25 @@ ARTICLES:
 
     try:
         async with httpx.AsyncClient(timeout=120) as client:
-            r = await client.post(
-                API_URL.format(model=GEMINI_MODEL),
-                headers={
-                    "x-goog-api-key": GEMINI_API_KEY,
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "systemInstruction": {"parts": [{"text": SYSTEM}]},
-                    "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                    "generationConfig": {
-                        "temperature": 0.1,
-                        "responseMimeType": "application/json",
-                        "responseSchema": SCHEMA,
-                    },
-                },
-            )
-            if r.status_code >= 400:
-                detail = r.text[:1200].replace("\n", " ")
-                raise RuntimeError(f"Gemini HTTP {r.status_code}: {detail}")
-            data = r.json()
+            models_to_try = [GEMINI_MODEL]
+            if FALLBACK_MODEL != GEMINI_MODEL:
+                models_to_try.append(FALLBACK_MODEL)
+
+            data = None
+            last_model_error = None
+            for model in models_to_try:
+                try:
+                    print(f"GEMINI MODEL: {model}", flush=True)
+                    data = await _request_model(client, model, prompt)
+                    break
+                except Exception as e:
+                    last_model_error = e
+                    print(f"GEMINI MODEL FAILED: {model}: {e}", flush=True)
+                    if model != models_to_try[-1]:
+                        print(f"GEMINI FALLBACK: {models_to_try[-1]}", flush=True)
+
+            if data is None:
+                raise last_model_error or RuntimeError("All Gemini models failed")
 
         text = (
             data.get("candidates", [{}])[0]
