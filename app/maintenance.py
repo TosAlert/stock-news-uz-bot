@@ -18,46 +18,22 @@ from .telegram import send_to_chat
 _SOURCE_LINE_RE = re.compile(r"^\s*(?:📰\s*)?manba\b", re.IGNORECASE)
 
 
-def _without_source(raw_text: str, html_text: str):
-    raw_lines = raw_text.splitlines()
-    html_lines = html_text.splitlines()
+def _without_source(raw_text: str):
+    """Remove only lines that start with 'Manba' and preserve the rest as plain text."""
+    lines = raw_text.splitlines()
+    new_lines = [line for line in lines if not _SOURCE_LINE_RE.match(line)]
 
-    if len(raw_lines) != len(html_lines):
+    if len(new_lines) == len(lines):
         return None
 
-    removed = False
-    new_html_lines = []
-    for raw_line, html_line in zip(raw_lines, html_lines):
-        if _SOURCE_LINE_RE.match(raw_line):
-            removed = True
-            continue
-        new_html_lines.append(html_line)
+    while new_lines and not new_lines[-1].strip():
+        new_lines.pop()
 
-    if not removed:
-        return None
-
-    while new_html_lines and not new_html_lines[-1].strip():
-        new_html_lines.pop()
-
-    return "\n".join(new_html_lines)
-
-
-async def _bot_get_chat():
-    """Ask Bot API for the channel's public username when available."""
-    if not TELEGRAM_BOT_TOKEN:
-        return None
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getChat"
-    async with httpx.AsyncClient(timeout=20) as client:
-        response = await client.post(url, json={"chat_id": TELEGRAM_CHANNEL_ID})
-        response.raise_for_status()
-        data = response.json()
-    if not data.get("ok"):
-        raise RuntimeError(data.get("description", "Telegram getChat xatosi"))
-    return data.get("result") or {}
+    return "\n".join(new_lines)
 
 
 async def _resolve_channel(client):
-    """Resolve the channel reliably from username, Bot API metadata, or dialogs."""
+    """Resolve the channel reliably from either @username or Telegram channel ID."""
     raw = str(TELEGRAM_CHANNEL_ID).strip()
     if not raw:
         raise RuntimeError("TELEGRAM_CHANNEL_ID bo'sh.")
@@ -65,14 +41,6 @@ async def _resolve_channel(client):
     if raw.startswith("@"):
         return await client.get_entity(raw)
 
-    # First ask the Bot API. For a public channel this gives us its username,
-    # which Telethon can resolve without relying on its local entity cache.
-    chat = await _bot_get_chat()
-    username = str(chat.get("username") or "").strip()
-    if username:
-        return await client.get_entity(f"@{username}")
-
-    # For private channels, find the entity in the authenticated user's dialogs.
     try:
         target = int(raw)
     except ValueError:
@@ -134,19 +102,16 @@ async def remove_sources() -> int:
             if not message.raw_text:
                 continue
 
-            new_html = _without_source(
-                message.raw_text,
-                message.text_html or message.raw_text,
-            )
-            if new_html is None:
+            new_text = _without_source(message.raw_text)
+            if new_text is None:
                 continue
 
             try:
                 await client.edit_message(
                     channel,
                     message.id,
-                    new_html,
-                    parse_mode="html",
+                    new_text,
+                    parse_mode=None,
                     link_preview=False,
                 )
                 edited += 1
