@@ -38,7 +38,7 @@ jobs:
           TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
           GEMINI_MODEL: gemini-2.5-flash
           MIN_IMPACT_SCORE: "4"
-          NEWS_LOOKBACK_MINUTES: "20"
+          NEWS_LOOKBACK_MINUTES: "60"
           MAX_AI_ITEMS_PER_RUN: "15"
           SEC_USER_AGENT: "StockNewsUZ/1.0 contact@example.com"
         run: python -m app.main --once
