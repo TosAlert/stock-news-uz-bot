@@ -42,6 +42,36 @@ def _without_source(raw_text: str, html_text: str):
     return "\n".join(new_html_lines)
 
 
+async def _resolve_channel(client):
+    """Resolve the channel reliably from either @username or Telegram channel ID."""
+    raw = str(TELEGRAM_CHANNEL_ID).strip()
+    if not raw:
+        raise RuntimeError("TELEGRAM_CHANNEL_ID bo'sh.")
+
+    # Public @username works directly.
+    if raw.startswith("@"):
+        return await client.get_entity(raw)
+
+    # For numeric channel IDs, first look through the authenticated user's dialogs.
+    # This supplies the channel access_hash that Telethon needs.
+    try:
+        target = int(raw)
+    except ValueError:
+        return await client.get_entity(raw)
+
+    target_id = target
+    if target_id < 0 and str(target_id).startswith("-100"):
+        target_id = int(str(target_id)[4:])
+
+    async for dialog in client.iter_dialogs():
+        entity = dialog.entity
+        if getattr(entity, "id", None) == target_id:
+            return entity
+
+    # Fall back to Telethon's normal resolver in case the entity is cached.
+    return await client.get_entity(target)
+
+
 async def remove_sources() -> int:
     if not all(
         [
@@ -67,7 +97,7 @@ async def remove_sources() -> int:
         if not await client.is_user_authorized():
             raise RuntimeError("Telegram session avtorizatsiyadan o'tmagan.")
 
-        channel = await client.get_entity(TELEGRAM_CHANNEL_ID)
+        channel = await _resolve_channel(client)
         me = await client.get_me()
         permissions = await client.get_permissions(channel, me)
         admin_rights = getattr(permissions, "admin_rights", None)
