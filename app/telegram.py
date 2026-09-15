@@ -30,8 +30,6 @@ def render(item, a):
     if sectors:
         parts.append(f"<b>Sektor:</b> {sectors}")
     parts += ["", f"<b>Nega muhim:</b> {_esc(reason)}"]
-    if item.url:
-        parts.append(f'\n📰 <a href="{_esc(item.url)}">Manba</a>')
     return "\n".join(parts)[:MAX_TELEGRAM_CHARS]
 
 async def send(text):
