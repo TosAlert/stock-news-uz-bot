@@ -45,8 +45,10 @@ async def cycle(dry_run=False):
         providers.append(RSSProvider(MACRO_RSS_URLS))
 
     all_items = []
+    # Fetch broad market/company news from Alpaca without restricting the
+    # provider to the watchlist. Gemini will decide relevance later.
     all_items += await providers[0].fetch(
-        wl,
+        None,
         since_minutes=NEWS_LOOKBACK_MINUTES,
     )
     all_items += await providers[1].fetch()
@@ -111,7 +113,7 @@ async def cycle(dry_run=False):
         else:
             try:
                 await send(text)
-                print("SENT:", result.get("headline_uz") or item.title)
+                print("SENT:", result.get("title_uz") or item.title)
             except Exception as e:
                 print("TELEGRAM ERROR:", e)
                 continue
