@@ -54,16 +54,28 @@ async def cycle(dry_run=False):
     all_items = []
 
     try:
-        alpaca_items = await providers[0].fetch(
+        broad_items = await providers[0].fetch(
             None,
             since_minutes=NEWS_LOOKBACK_MINUTES,
         )
-        log(f"ALPACA NEWS: {len(alpaca_items)}")
-        if alpaca_items:
-            log(f"ALPACA TOP: {alpaca_items[0].title[:160]}")
-        all_items += alpaca_items
+        log(f"ALPACA BROAD: {len(broad_items)}")
+        if broad_items:
+            log(f"BROAD TOP: {broad_items[0].title[:160]}")
+        all_items += broad_items
     except Exception as e:
-        log(f"ALPACA ERROR: {type(e).__name__}: {e}")
+        log(f"ALPACA BROAD ERROR: {type(e).__name__}: {e}")
+
+    try:
+        watchlist_items = await providers[0].fetch(
+            wl,
+            since_minutes=NEWS_LOOKBACK_MINUTES,
+        ) if wl else []
+        log(f"ALPACA WATCHLIST: {len(watchlist_items)}")
+        if watchlist_items:
+            log(f"WATCHLIST TOP: {watchlist_items[0].title[:160]}")
+        all_items += watchlist_items
+    except Exception as e:
+        log(f"ALPACA WATCHLIST ERROR: {type(e).__name__}: {e}")
 
     try:
         sec_items = await providers[1].fetch()
@@ -83,8 +95,7 @@ async def cycle(dry_run=False):
     log(f"ALL NEWS: {len(all_items)}")
     all_items.sort(key=lambda x: x.published_at, reverse=True)
 
-    now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(minutes=NEWS_LOOKBACK_MINUTES + 5)
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=NEWS_LOOKBACK_MINUTES + 5)
 
     state = load_state()
     published_ids = set(state["published_ids"])
@@ -110,7 +121,7 @@ async def cycle(dry_run=False):
 
     log(f"CANDIDATES: {len(candidates)}")
     if candidates:
-        for i, item in enumerate(candidates[:5], 1):
+        for i, item in enumerate(candidates[:10], 1):
             log(f"CANDIDATE {i}: {item.title[:140]}")
 
     if not candidates:
