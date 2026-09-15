@@ -14,33 +14,13 @@ Your job is to analyze financial/news articles and write natural Uzbek financial
 
 IMPORTANT:
 - Return ONLY valid JSON matching the provided schema.
-- Use ONLY facts explicitly stated or directly supported by the article TITLE and BODY.
-- NEVER invent facts, motives, numbers, tickers, dates, causes, market reactions, investor behavior or company intentions.
-- NEVER infer a cause just because it sounds financially plausible.
+- Do NOT invent facts, motives, numbers, tickers, dates, causes or market reactions.
 - Keep names, company names, tickers and numbers accurate.
 - Do NOT translate word-for-word.
 - Write natural, concise Uzbek that sounds like a real financial journalist.
 - Headline, summary and reason must be clean Uzbek prose only.
-
-STRICT EVIDENCE RULE:
-Every sentence in headline_uz, summary_uz and reason_uz must be supported by the article.
-If the article reports an event but does NOT explicitly explain why it happened, do NOT provide your own explanation.
-If the article says something "could", "may", "might", "reportedly", "according to analysts" or otherwise expresses uncertainty, preserve that uncertainty in Uzbek.
-Do not turn a forecast into a fact.
-Do not turn an analyst opinion into an established fact.
-Do not turn a possible market effect into a confirmed market reaction.
-
-EXAMPLES OF FORBIDDEN INFERENCE:
-- If an article says "S&P 500 could fall 30% because of an AI bubble", do NOT write that AI costs "caused" the index to fall.
-- If an article says an analyst recommends buying a stock, do NOT claim the stock is rising unless the article says it rose.
-- If an article says "stock falls" but gives no cause, do NOT invent a cause.
-- If an article reports a CEO comment, do NOT claim investors reacted unless the article reports that reaction.
-
-REASON_ FUNCTION:
-reason_uz is NOT a place for your own market analysis.
-It must answer "Nega muhim?" using only an explicit fact from the article.
-If the article itself does not give a clear factual reason why the event matters, use exactly:
-"Maqolada bu voqeaning bozor uchun ahamiyati aniq ko'rsatilmagan."
+- affected_tickers must contain ONLY tickers explicitly mentioned or clearly identified by the article/source.
+- affected_sectors must contain ONLY sectors explicitly mentioned or clearly identifiable from the article.
 
 PUBLISH RULE:
 Publish useful news about:
@@ -63,15 +43,13 @@ Reject only:
 A neutral direction is allowed when the news itself is relevant.
 
 DIRECTION:
-bullish = the article describes or clearly supports a positive effect;
-bearish = the article describes or clearly supports a negative effect;
-mixed = the article explicitly contains important positive and negative effects;
-neutral = the article does not establish a clear direction.
-Do not infer direction from your own financial assumptions.
+bullish = likely positive pressure;
+bearish = likely negative pressure;
+mixed = important positive and negative effects;
+neutral = no clear direction.
 
 IMPACT:
 1-3 low, 4-6 moderate, 7-8 high, 9-10 very high.
-Score the importance of the reported news itself, not what you speculate might happen.
 Do not give a high score merely because a headline sounds dramatic.
 
 UZBEK STYLE:
@@ -83,25 +61,22 @@ UZBEK STYLE:
 - "revenue" -> "tushum"
 - "stake" -> "ulush"
 - "could weigh on the stock" -> "aksiya narxiga bosim qilishi mumkin"
-- "according to analysts" -> "tahlilchilarga ko'ra"
-- "reportedly" -> "xabar qilinishicha"
-- "may/could" -> "mumkin"
 
 HEADLINE:
-Write one short, natural Uzbek news headline. Restructure it when necessary, but preserve the exact factual meaning and uncertainty.
+Write one short, natural Uzbek news headline. Restructure it when necessary.
 Example:
 "Why Is AMD Stock Falling Monday?"
 -> "AMD aksiyalari dushanba kuni nega pasaymoqda?"
 
 SUMMARY:
-1-2 short sentences. State exactly what happened and the most important fact/number from the article.
+1-2 short sentences. State what happened and the most important fact/number.
 No extra interpretation.
 
 REASON:
-1 short sentence using only a fact explicitly supported by the article.
-Never explain a cause or market impact that the article does not state.
-When there is no explicit factual reason why it matters, use exactly:
+1 short sentence explaining why the event matters, but only from facts supported by the article.
+If the article does not provide a clear reason:
 "Maqolada bu voqeaning bozor uchun ahamiyati aniq ko'rsatilmagan."
+Do not invent causal explanations.
 
 CATEGORY must be one of:
 stock, company, market, sector, macro, regulatory, geopolitical, analyst.
@@ -131,10 +106,19 @@ SCHEMA = {
             "headline_uz": {"type": "string"},
             "summary_uz": {"type": "string"},
             "reason_uz": {"type": "string"},
+            "affected_tickers": {
+                "type": "array",
+                "items": {"type": "string"},
+            },
+            "affected_sectors": {
+                "type": "array",
+                "items": {"type": "string"},
+            },
         },
         "required": [
             "source_id", "publish", "direction", "impact_score",
-            "category", "headline_uz", "summary_uz", "reason_uz"
+            "category", "headline_uz", "summary_uz", "reason_uz",
+            "affected_tickers", "affected_sectors"
         ],
     },
 }
@@ -150,6 +134,8 @@ def _fallback(item: NewsItem, reason="AI tahlili bajarilmadi."):
         "headline_uz": item.title,
         "summary_uz": "",
         "reason_uz": reason,
+        "affected_tickers": [str(x).upper() for x in (item.tickers or [])],
+        "affected_sectors": [],
     }
 
 
@@ -231,14 +217,6 @@ Return one JSON object for EACH ARTICLE.
 Keep the exact SOURCE_ID.
 Do not omit an article even if publish=false.
 
-CRITICAL FINAL CHECK BEFORE ANSWERING:
-1. Is every fact in headline_uz supported by TITLE/BODY?
-2. Is every fact in summary_uz supported by TITLE/BODY?
-3. Is every claim in reason_uz supported by TITLE/BODY?
-4. Did you preserve uncertainty such as may/could/reportedly/according to analysts?
-5. Did you avoid inventing a cause for a stock move?
-6. If the article does not explicitly explain why the event matters, did you use the exact fallback reason sentence?
-
 ARTICLES:
 {chr(10).join(blocks)}
 """
@@ -294,6 +272,20 @@ ARTICLES:
             }:
                 category = "company"
 
+            raw_tickers = x.get("affected_tickers") or item.tickers or []
+            affected_tickers = []
+            for ticker in raw_tickers:
+                value = str(ticker).strip().upper()
+                if value and value not in affected_tickers:
+                    affected_tickers.append(value)
+
+            raw_sectors = x.get("affected_sectors") or []
+            affected_sectors = []
+            for sector in raw_sectors:
+                value = str(sector).strip()
+                if value and value not in affected_sectors:
+                    affected_sectors.append(value)
+
             out.append({
                 "source_id": item.source_id,
                 "publish": bool(x.get("publish", False)),
@@ -303,6 +295,8 @@ ARTICLES:
                 "headline_uz": str(x.get("headline_uz") or item.title).strip(),
                 "summary_uz": str(x.get("summary_uz") or "").strip(),
                 "reason_uz": str(x.get("reason_uz") or "").strip(),
+                "affected_tickers": affected_tickers,
+                "affected_sectors": affected_sectors,
             })
         return out
     except Exception as e:
