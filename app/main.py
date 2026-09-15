@@ -13,6 +13,7 @@ from .config import (
 )
 from .ai import analyze_batch
 from .telegram import render, send
+from .maintenance import process_commands
 from .providers.alpaca_news import AlpacaNewsProvider
 from .providers.sec import SECProvider
 from .providers.rss import RSSProvider
@@ -43,6 +44,11 @@ def log(message):
 
 
 async def cycle(dry_run=False):
+    try:
+        await process_commands()
+    except Exception as e:
+        log(f"COMMAND ERROR: {type(e).__name__}: {e}")
+
     wl = watchlist()
     log(f"WATCHLIST: {len(wl)} tickerlar")
     log(f"LOOKBACK: {NEWS_LOOKBACK_MINUTES} daqiqa")
