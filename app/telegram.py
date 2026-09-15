@@ -2,11 +2,14 @@ import html
 import httpx
 from .config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID, MAX_TELEGRAM_CHARS
 
+
 def emoji(direction):
     return {"bullish":"🟢", "bearish":"🔴", "mixed":"🟡", "neutral":"⚪"}.get(str(direction).lower(), "🟡")
 
+
 def _esc(value):
     return html.escape(str(value or ""), quote=True)
+
 
 def render(item, a):
     tickers = _esc(", ".join(a.get("affected_tickers", [])))
@@ -32,12 +35,13 @@ def render(item, a):
     parts += ["", f"<b>Nega muhim:</b> {_esc(reason)}"]
     return "\n".join(parts)[:MAX_TELEGRAM_CHARS]
 
-async def send(text):
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHANNEL_ID:
-        raise RuntimeError("Telegram token/channel sozlanmagan.")
+
+async def send_to_chat(chat_id, text):
+    if not TELEGRAM_BOT_TOKEN:
+        raise RuntimeError("Telegram token sozlanmagan.")
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
-        "chat_id": TELEGRAM_CHANNEL_ID,
+        "chat_id": chat_id,
         "text": text,
         "parse_mode": "HTML",
         "disable_web_page_preview": True,
@@ -46,3 +50,9 @@ async def send(text):
         r = await client.post(url, json=payload)
         r.raise_for_status()
         return r.json()
+
+
+async def send(text):
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHANNEL_ID:
+        raise RuntimeError("Telegram token/channel sozlanmagan.")
+    return await send_to_chat(TELEGRAM_CHANNEL_ID, text)
