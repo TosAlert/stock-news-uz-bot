@@ -42,18 +42,37 @@ def _without_source(raw_text: str, html_text: str):
     return "\n".join(new_html_lines)
 
 
+async def _bot_get_chat():
+    """Ask Bot API for the channel's public username when available."""
+    if not TELEGRAM_BOT_TOKEN:
+        return None
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getChat"
+    async with httpx.AsyncClient(timeout=20) as client:
+        response = await client.post(url, json={"chat_id": TELEGRAM_CHANNEL_ID})
+        response.raise_for_status()
+        data = response.json()
+    if not data.get("ok"):
+        raise RuntimeError(data.get("description", "Telegram getChat xatosi"))
+    return data.get("result") or {}
+
+
 async def _resolve_channel(client):
-    """Resolve the channel reliably from either @username or Telegram channel ID."""
+    """Resolve the channel reliably from username, Bot API metadata, or dialogs."""
     raw = str(TELEGRAM_CHANNEL_ID).strip()
     if not raw:
         raise RuntimeError("TELEGRAM_CHANNEL_ID bo'sh.")
 
-    # Public @username works directly.
     if raw.startswith("@"):
         return await client.get_entity(raw)
 
-    # For numeric channel IDs, first look through the authenticated user's dialogs.
-    # This supplies the channel access_hash that Telethon needs.
+    # First ask the Bot API. For a public channel this gives us its username,
+    # which Telethon can resolve without relying on its local entity cache.
+    chat = await _bot_get_chat()
+    username = str(chat.get("username") or "").strip()
+    if username:
+        return await client.get_entity(f"@{username}")
+
+    # For private channels, find the entity in the authenticated user's dialogs.
     try:
         target = int(raw)
     except ValueError:
@@ -68,7 +87,6 @@ async def _resolve_channel(client):
         if getattr(entity, "id", None) == target_id:
             return entity
 
-    # Fall back to Telethon's normal resolver in case the entity is cached.
     return await client.get_entity(target)
 
 
@@ -236,7 +254,6 @@ async def process_commands():
                 "❌ Tozalashda xato yuz berdi. GitHub Actions logini tekshirish kerak.",
             )
 
-    # Confirm all fetched updates so they are not processed again.
     await _bot_request(
         "getUpdates",
         {
