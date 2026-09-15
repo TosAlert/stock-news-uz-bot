@@ -25,7 +25,7 @@ MAX_TELEGRAM_CHARS = int(env("MAX_TELEGRAM_CHARS", "3800"))
 
 # GitHub Actions schedule is 5 minutes minimum. We look back longer
 # to tolerate schedule delays; published IDs prevent duplicates.
-NEWS_LOOKBACK_MINUTES = int(env("NEWS_LOOKBACK_MINUTES", "20"))
+NEWS_LOOKBACK_MINUTES = int(env("NEWS_LOOKBACK_MINUTES", "60"))
 MAX_AI_ITEMS_PER_RUN = int(env("MAX_AI_ITEMS_PER_RUN", "15"))
 STATE_PATH = ROOT / env("STATE_PATH", "data/state.json")
 
