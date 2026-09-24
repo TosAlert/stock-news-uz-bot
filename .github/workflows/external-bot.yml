@@ -37,7 +37,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
           GEMINI_MODEL: gemini-3.6-flash
-          MIN_IMPACT_SCORE: "4"
+          MIN_IMPACT_SCORE: "6"
           NEWS_LOOKBACK_MINUTES: "60"
           MAX_AI_ITEMS_PER_RUN: "15"
           SEC_USER_AGENT: "StockNewsUZ/1.0 contact@example.com"
