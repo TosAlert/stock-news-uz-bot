@@ -23,7 +23,7 @@ GEMINI_MODEL = env("GEMINI_MODEL", "gemini-2.5-flash")
 
 SEC_USER_AGENT = env("SEC_USER_AGENT", "StockNewsUZ/1.0 contact@example.com")
 
-MIN_IMPACT_SCORE = int(env("MIN_IMPACT_SCORE", "4"))
+MIN_IMPACT_SCORE = int(env("MIN_IMPACT_SCORE", "6"))
 MAX_TELEGRAM_CHARS = int(env("MAX_TELEGRAM_CHARS", "3800"))
 
 # GitHub Actions schedule is 5 minutes minimum. We look back longer
