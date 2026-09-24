@@ -40,7 +40,7 @@ jobs:
           TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
           TELEGRAM_SESSION_STRING: ${{ secrets.TELEGRAM_SESSION_STRING }}
           GEMINI_MODEL: gemini-3.6-flash
-          MIN_IMPACT_SCORE: "4"
+          MIN_IMPACT_SCORE: "6"
           NEWS_LOOKBACK_MINUTES: "60"
           MAX_AI_ITEMS_PER_RUN: "15"
           SEC_USER_AGENT: "StockNewsUZ/1.0 contact@example.com"
