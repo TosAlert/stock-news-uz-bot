@@ -22,25 +22,40 @@ IMPORTANT:
 - affected_tickers must contain ONLY tickers explicitly mentioned or clearly identified by the article/source.
 - affected_sectors must contain ONLY sectors explicitly mentioned or clearly identifiable from the article.
 
-PUBLISH RULE:
-Publish useful news about:
-- individual stocks and companies;
-- Nasdaq, S&P 500, Dow and the broad market;
-- sectors;
-- Fed/rates/CPI/PCE/jobs/GDP/Treasury yields;
-- SEC/FTC/DOJ/FDA and other regulation;
-- tariffs, sanctions, wars and geopolitics;
-- important contracts, acquisitions, launches, recalls, supply disruptions;
-- analyst actions or "why is stock falling/rising?" articles when they contain meaningful new information.
+PROFESSIONAL NEWS PUBLISH POLICY:
+The channel is intentionally selective. Prefer fewer high-value, verified news items over frequent low-value updates.
 
-Reject only:
-- spam;
-- advertising;
-- duplicate/recycled material;
-- empty SEO content;
-- content with essentially no factual news.
+PUBLISH only when the article reports a specific, material, factual event that is new and could reasonably matter to US equity investors. Prioritize:
+- earnings releases, material changes to guidance, and significant financial results;
+- major contracts, acquisitions, divestitures, product launches, recalls, or supply disruptions;
+- material FDA, SEC, FTC, DOJ, court, or other regulatory decisions;
+- significant capital raises, dilution, buybacks, dividends, debt/default events, or management changes;
+- important Fed, CPI, PCE, jobs, GDP, Treasury-yield, tariff, sanctions, or geopolitical developments with a clear market connection;
+- material sector-wide events supported by the article.
 
-A neutral direction is allowed when the news itself is relevant.
+USUALLY REJECT:
+- analyst upgrades/downgrades, price-target changes, opinion pieces, predictions, and commentary without a genuinely new underlying fact;
+- "why a stock is rising/falling" articles that only describe price action or repeat known information;
+- routine daily market recaps, ordinary price movements, generic investing advice, promotional content, SEO articles, rumors without reliable confirmation, and recycled stories;
+- articles whose body is too thin to verify the headline or explain the event.
+
+A story about an analyst action may be published only if it contains a material, new factual catalyst beyond the analyst's opinion. Do not reject important factual news solely because its direction is neutral or mixed.
+
+EVIDENCE AND FRESHNESS:
+- Base decisions on the supplied source, title, body, timestamp, and URL; never infer facts not present in them.
+- Treat the article publication/update time as different from the date the underlying event occurred. If the article repeats an old event without a material update, set publish=false.
+- If the source body does not substantiate the headline, details are missing, or the claim appears unverified, set publish=false.
+- Do not call a story "breaking" or "new" unless the supplied evidence supports that.
+- Never invent a company, ticker, sector, financial number, source confirmation, or causal link.
+
+PUBLISH THRESHOLD:
+- Scores 1-3: low importance; publish=false.
+- Scores 4-6: moderate importance; normally publish=false for this selective channel.
+- Scores 7-8: high importance; publish only if the factual-event and freshness tests above pass.
+- Scores 9-10: very high importance; still require credible evidence and a material event.
+- Never inflate the score to make an article eligible. A dramatic headline alone is not a reason for a high score.
+
+A neutral direction is allowed when the event is materially relevant. Direction is not the same as news quality: a bullish article can be low quality, and a bearish article can be important.
 
 DIRECTION:
 bullish = likely positive pressure;
