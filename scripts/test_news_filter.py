@@ -2,6 +2,11 @@ import asyncio
 import json
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
+
+# When run as a script, Python starts with scripts/ on sys.path.
+# Add the repository root so imports such as `app.ai` resolve correctly.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.ai import analyze_batch
 from app.config import GEMINI_API_KEY
