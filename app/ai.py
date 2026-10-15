@@ -301,7 +301,7 @@ ARTICLES:
             }:
                 category = "company"
 
-            raw_tickers = x.get("affected_tickers") or item.tickers or []
+            raw_tickers = x.get("affected_tickers") or []  # Do not re-add unconfirmed source/watchlist tickers.
             affected_tickers = []
             for ticker in raw_tickers:
                 value = str(ticker).strip().upper()
