@@ -23,7 +23,7 @@ CASES = [
             "The Dow Jones Industrial Average fell 0.09%. The report identifies "
             "no new economic release, policy decision, company event, or other catalyst."
         ),
-        "tickers": [],
+        "tickers": ["BSP", "CRWV", "DELL", "GLND", "RKLB"],  # unrelated source/watchlist symbols
     },
     {
         "id": "test-price-action",
