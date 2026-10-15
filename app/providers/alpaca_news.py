@@ -46,6 +46,19 @@ class AlpacaNewsProvider:
                 dt = datetime.now(timezone.utc)
 
             symbols = [str(s).upper() for s in (x.get("symbols") or [])]
+            images = x.get("images") or []
+            image_url = ""
+            if isinstance(images, list):
+                # Alpaca news images commonly provide small, medium, and large variants.
+                ordered = sorted(
+                    (img for img in images if isinstance(img, dict) and img.get("url")),
+                    key=lambda img: {"large": 0, "medium": 1, "small": 2}.get(
+                        str(img.get("size", "")).lower(), 3
+                    ),
+                )
+                if ordered:
+                    image_url = str(ordered[0].get("url") or "")
+
             out.append(
                 NewsItem(
                     source=self.name,
@@ -54,6 +67,7 @@ class AlpacaNewsProvider:
                     url=x.get("url") or "",
                     published_at=dt,
                     body=x.get("summary") or "",
+                    image_url=image_url,
                     tickers=symbols,
                     category="",
                 )
