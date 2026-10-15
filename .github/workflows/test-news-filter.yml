@@ -2,12 +2,6 @@ name: Professional News Filter Test
 
 on:
   workflow_dispatch:
-    inputs:
-      ref:
-        description: "Branch to test"
-        required: true
-        default: "professional-news-filter"
-        type: string
 
 permissions:
   contents: read
@@ -18,8 +12,6 @@ jobs:
     steps:
       - name: Checkout selected branch
         uses: actions/checkout@v5
-        with:
-          ref: ${{ inputs.ref }}
 
       - name: Set up Python
         uses: actions/setup-python@v6
