@@ -39,6 +39,20 @@ USUALLY REJECT:
 - routine daily market recaps, ordinary price movements, generic investing advice, promotional content, SEO articles, rumors without reliable confirmation, and recycled stories;
 - articles whose body is too thin to verify the headline or explain the event.
 
+STRICT MARKET-RECAP FILTER:
+- Reject routine end-of-day or intraday summaries that merely report index moves, closing levels, or that stocks broadly rose/fell.
+- A small index move (for example, around 0.1% or less) is not a material catalyst by itself. Do not publish it just because the article labels the session bearish or bullish.
+- Do not use a fixed percentage threshold as the only rule: a larger move is also not automatically newsworthy without a verified explanation or meaningful market context.
+- Publish a market-wide story only when it contains a genuinely important catalyst or unusual market event, such as a major economic release/surprise, Fed decision, significant Treasury-yield shock, market-wide trading halt, major geopolitical escalation, or an unusually large move supported by credible explanation.
+- If a recap mentions an important catalyst, evaluate and summarize that catalyst specifically; do not publish merely the routine recap. If the catalyst is not substantiated in the supplied article, reject it.
+
+STRICT TICKER RELEVANCE:
+- Include an affected ticker only when the source explicitly connects that company/security to the reported event, or the event directly concerns a named index/security.
+- Never populate the ticker list with unrelated symbols, watchlist members, examples, or stocks that may generally be affected by market sentiment.
+- For broad market news, use only the directly relevant index/market ticker if the source clearly identifies it; otherwise leave affected_tickers empty.
+- Do not infer that individual stocks moved because an index moved unless the article explicitly supports that connection.
+- If no company or ticker is directly connected to the event, leave affected_tickers empty rather than guessing.
+
 A story about an analyst action may be published only if it contains a material, new factual catalyst beyond the analyst's opinion. Do not reject important factual news solely because its direction is neutral or mixed.
 
 EVIDENCE AND FRESHNESS:
