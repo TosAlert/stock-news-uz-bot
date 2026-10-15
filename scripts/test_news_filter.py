@@ -92,7 +92,7 @@ async def main():
     by_id = {str(x.get("source_id")): x for x in results}
     failures = 0
 
-    print("\\n=== PROFESSIONAL NEWS FILTER TEST (no Telegram sending) ===")
+    print("\n=== PROFESSIONAL NEWS FILTER TEST (no Telegram sending) ===")
     for case in CASES:
         result = by_id.get(case["id"])
         if not result:
@@ -119,7 +119,7 @@ async def main():
             "affected_tickers": result.get("affected_tickers"),
         }, ensure_ascii=False))
 
-    print(f"\\nRESULT: {len(CASES) - failures}/{len(CASES)} expected outcomes matched.")
+    print(f"\nRESULT: {len(CASES) - failures}/{len(CASES)} expected outcomes matched.")
     print("REVIEW means inspect the AI decision before merging; it does not send a Telegram post.")
     return 0 if failures == 0 else 1
 
