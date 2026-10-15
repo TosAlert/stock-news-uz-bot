@@ -12,7 +12,7 @@ from .config import (
     watchlist,
 )
 from .ai import analyze_batch
-from .telegram import render, send
+from .telegram import render, send_news
 from .maintenance import process_commands
 from .providers.alpaca_news import AlpacaNewsProvider
 from .providers.sec import SECProvider
@@ -174,7 +174,7 @@ async def cycle(dry_run=False):
             log("\n--- DRY RUN ---\n" + text)
         else:
             try:
-                await send(text)
+                await send_news(item, text)
                 sent_count += 1
                 log("SENT: " + str(result.get("title_uz") or item.title))
             except Exception as e:

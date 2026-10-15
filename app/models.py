@@ -10,5 +10,6 @@ class NewsItem:
     url: str
     published_at: datetime
     body: str = ""
+    image_url: str = ""
     tickers: list[str] = field(default_factory=list)
     category: str = ""
